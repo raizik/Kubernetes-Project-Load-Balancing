@@ -16,6 +16,3 @@ This algorithm chooses the next pod to send the incoming job to by choosing two 
 This algorithm is based on IDLE messages sent from the pods to the Load Balancer without it having to query them for their availability, service rate, load, etc.. As long as there are free pods - the incoming job is sent to one of them at random. Once there is an incoming job and non of the pods is available - the job would be sent to the last pod that received a job. 
 We implemented this by using a Node.js web application running on a pod set in the master node handling HTTP Post requests sent from the pods in the worker node. The dockerimage folder can be found in dockerimages folder. The bash script for choosing random idle pod idleloop can be found in the kubetest folder
 
-Reports folder includes the final report and the final presentation
-
-For any questions contact us at raizik, ziv.krimberg, doronbut (@campus.technion.ac.il)
