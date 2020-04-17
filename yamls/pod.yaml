@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: webr-master
+spec:
+  containers:
+  - image: idlereceiver:latest
+    imagePullPolicy: Never
+    name: idlereceiver
+    ports:
+    - containerPort: 8082
+      name: ir
+      protocol: TCP
+  hostname: webr-master
+  nodeName: kind-control-plane

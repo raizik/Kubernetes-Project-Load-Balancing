@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: webr-svc-fivep
+  labels:
+    run: fivepi
+spec:
+ # externalTrafficPolicy: Local #addition      #addition 1212
+  clusterIP: None
+  ports:
+  #- port: 8081
+  # name: webr-two
+  - port: 8080
+    name: webr-five-p
+  selector:
+   run: fivepi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: fivepi
+  labels:
+    app: fivepi
+spec:
+  type: NodePort
+  ports:
+  #- port: 8081
+   # nodePort: 30375
+   # protocol: TCP
+   # targetPort: 8081
+   # name: webr-two
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+    name: webr-five-p
+  selector:
+    app: fivepi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: webr-five-p
+  labels:
+    app: fivepi
+spec:
+  serviceName: "webr-svc-fivep"
+  podManagementPolicy: Parallel # Default is OrderedReady
+  replicas: 64 # Default is 1
+  selector:
+    matchLabels:
+      app: fivepi # Has to match .spec.template.metadata.labels
+  template:
+    metadata:
+      labels:
+        app: fivepi # Has to match .spec.selector.matchLabels
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: webr-svc-fivep
+        image: fivefivestrongpi:latest
+        imagePullPolicy: Never #changed 120919
+        ports:
+        - containerPort: 8080
+          name: webr-five-p
+        volumeMounts:
+        - name: webr-five-p-persistent-storage
+          mountPath: /usr/share/webr/html
+  volumeClaimTemplates:
+  - metadata:
+      name: webr-five-p-persistent-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 100Mi
+

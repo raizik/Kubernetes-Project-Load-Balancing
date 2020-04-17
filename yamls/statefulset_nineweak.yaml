@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: webr-service-nineweak
+  labels:
+    run: 9weak 
+spec:
+ # externalTrafficPolicy: Local #addition      #addition 1212
+  clusterIP: None
+  ports:
+  #- port: 8081
+  # name: webr-two
+  - port: 8080
+    name: webr-nineweak
+  selector:
+   run: 9weak
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nineweak
+  labels:
+    app: 9weak
+spec:
+  type: NodePort
+  ports:
+  #- port: 8081
+   # nodePort: 30375
+   # protocol: TCP
+   # targetPort: 8081
+   # name: webr-two
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+    name: webr-nineweak
+  selector:
+    app: 9weak
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: webr-nineweak
+  labels:
+    app: 9weak
+spec:
+  serviceName: "webr-service-nineweak"
+  podManagementPolicy: Parallel # Default is OrderedReady
+  replicas: 64 # Default is 1
+  selector:
+    matchLabels:
+      app: 9weak # Has to match .spec.template.metadata.labels
+  template:
+    metadata:
+      labels:
+        app: 9weak # Has to match .spec.selector.matchLabels
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: webr-service-nineweak
+        image: oneninestrong:latest
+        imagePullPolicy: Never #changed 120919
+        ports:
+        - containerPort: 8080
+          name: webr-nineweak
+        volumeMounts:
+        - name: webr-nineweak-persistent-storage
+          mountPath: /usr/share/webr/html
+  volumeClaimTemplates:
+  - metadata:
+      name: webr-nineweak-persistent-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 100Mi
+

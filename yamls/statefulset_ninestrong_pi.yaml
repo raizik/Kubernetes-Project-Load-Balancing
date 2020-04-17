@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: webr-svc-ninesp
+  labels:
+    run: 9strongpi
+spec:
+ # externalTrafficPolicy: Local #addition      #addition 1212
+  clusterIP: None
+  ports:
+  #- port: 8081
+  # name: webr-two
+  - port: 8080
+    name: webr-nines-p
+  selector:
+   run: 9strongpi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ninestrongpi
+  labels:
+    app: 9strongpi
+spec:
+  type: NodePort
+  ports:
+  #- port: 8081
+   # nodePort: 30375
+   # protocol: TCP
+   # targetPort: 8081
+   # name: webr-two
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+    name: webr-nines-p
+  selector:
+    app: 9strongpi
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: webr-nines-p
+  labels:
+    app: 9strongpi
+spec:
+  serviceName: "webr-svc-ninesp"
+  podManagementPolicy: Parallel # Default is OrderedReady
+  replicas: 64 # Default is 1
+  selector:
+    matchLabels:
+      app: 9strongpi # Has to match .spec.template.metadata.labels
+  template:
+    metadata:
+      labels:
+        app: 9strongpi # Has to match .spec.selector.matchLabels
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: webr-svc-ninesp
+        image: nineonestrongpi:latest
+        imagePullPolicy: Never #changed 120919
+        ports:
+        - containerPort: 8080
+          name: webr-nines-p
+        volumeMounts:
+        - name: webr-ninestrong-p-persistent-storage
+          mountPath: /usr/share/webr/html
+  volumeClaimTemplates:
+  - metadata:
+      name: webr-ninestrong-p-persistent-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 100Mi
+

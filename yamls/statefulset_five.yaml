@@ -1,0 +1,76 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: webr-svc-five
+  labels:
+    run: rachtestnopost
+spec:
+ # externalTrafficPolicy: Local #addition      #addition 1212
+  clusterIP: None
+  ports:
+  #- port: 8081
+  # name: webr-two
+  - port: 8080
+    name: webr-five
+  selector:
+   run: rachtestnopost
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: svcfive
+  labels:
+    app: rachtestnopost
+spec:
+  type: NodePort
+  ports:
+  #- port: 8081
+   # nodePort: 30375
+   # protocol: TCP
+   # targetPort: 8081
+   # name: webr-two
+  - port: 8080
+    protocol: TCP
+    targetPort: 8080
+    name: webr-five
+  selector:
+    app: rachtestnopost
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: webr-five
+  labels:
+    app: rachtestnopost
+spec:
+  serviceName: "svcfive"
+  podManagementPolicy: Parallel # Default is OrderedReady
+  replicas: 64 # Default is 1
+  selector:
+    matchLabels:
+      app: rachtestnopost # Has to match .spec.template.metadata.labels
+  template:
+    metadata:
+      labels:
+        app: rachtestnopost # Has to match .spec.selector.matchLabels
+    spec:
+      terminationGracePeriodSeconds: 10
+      containers:
+      - name: webr-svc-five
+        image: fivefivestrong:latest
+        imagePullPolicy: Never #changed 120919
+        ports:
+        - containerPort: 8080
+          name: webr-five
+        volumeMounts:
+        - name: webr-five-persistent-storage
+          mountPath: /usr/share/webr/html
+  volumeClaimTemplates:
+  - metadata:
+      name: webr-five-persistent-storage
+    spec:
+      accessModes: [ "ReadWriteOnce" ]
+      resources:
+        requests:
+          storage: 100Mi
+
