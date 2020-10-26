@@ -75,7 +75,7 @@ type balancerState struct {
 	affinity  affinityPolicy
 	busyPods map[string]string // busyPods[i] == j <=> endpoint ipport j is busy. init to empty
 	last_endpoint string      // last ipport pod the LB sent a job to
-	idleTokens int	// number of idle tokens. init to number of endpoints 
+	idleTokens int	// number of idle tokens. init to number of endpoints
 }
 
 func newAffinityPolicy(affinityType v1.ServiceAffinity, ttlSeconds int) *affinityPolicy {
@@ -309,12 +309,10 @@ func (lb *LoadBalancerRR) NextEndpoint(svcPort proxy.ServicePortName, srcAddr ne
 				randgenerator := rand.New(randsource)
 				// choose random pod from currently available pods
 				randomnum := 0
-				do
-				{
+				for ok_rand := true; ok_rand; ok_rand = state.busyPods[candidate] {
 					randomnum = randgenerator.Intn(len(state.endpoints))
 					candidate = state.endpoints[randomnum]
-				}
-				while (ok := state.busyPods[candidate]; ok)
+						}
 			}
 			//send token to chosen endpoint
 			state.idleTokens -= 1
