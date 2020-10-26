@@ -73,13 +73,9 @@ type balancerState struct {
 	endpoints []string // a list of "ip:port" style strings
 	index     int      // current index into endpoints
 	affinity  affinityPolicy
-	// Our addition: 1. a list of "ip:port" strings of IDLE endpoints.
-	//							 2. a string of the "ip:port" of the last endpoint a job was sent to.
-	//tickets		map[string]int	// tickets[i] == 1 <=> pod i is idle
-	//idlePods map[int]string // idlePods[i] == ipport <=> pod ipport is the ith pod to send IDLE
+	busyPods map[string]string // busyPods[i] == j <=> endpoint ipport j is busy. init to empty
 	last_endpoint string      // last ipport pod the LB sent a job to
-	numBusy int	//number of idle pods in idlePods array (and number of ones in tickets)
-	sortedEndpoints []string
+	idleTokens int	// should be init to len(endpoints) number of idle pods in idlePods array (and number of ones in tickets)
 }
 
 func newAffinityPolicy(affinityType v1.ServiceAffinity, ttlSeconds int) *affinityPolicy {
@@ -297,28 +293,40 @@ func (lb *LoadBalancerRR) NextEndpoint(svcPort proxy.ServicePortName, srcAddr ne
 			splt_rand_pod := strings.Split(ascii_rand_pod, "\n")
 			random_ipport = splt_rand_pod[0]
 		}
-		//num idle > 0 		=>		there are idle pods
-		if (state.numBusy < len(state.endpoints)) {
+		//remove current idle endpoint from busyPods
+		_, ok_remove := state.busyPods[random_ipport];
+    if ok_remove {
+        delete(state.busyPods, random_ipport);
+    }
+		//if lb has idle tokens (there are idle pods)
+		if (state.idleTokens > 0) {
 			//choose random pod
 			//IDLE messages received
 			if (random_ipport != "") {
 				candidate = random_ipport
-			} /*init (no IDLE message received yet)*/ else {
-				candidate = state.endpoints[state.numBusy]
+			} /*initilization (no IDLE message received yet)*/ else {
+				randsource := rand.NewSource(time.Now().UnixNano())
+				randgenerator := rand.New(randsource)
+				// choose random pod from currently available pods
+				randomnum := 0
+				do
+				{
+					randomnum = randgenerator.Intn(len(state.endpoints))
+					candidate = state.endpoints[randomnum]
+				}
+				while (ok := state.busyPods[candidate]; ok)
 			}
-			//increase num busy pods
-			state.numBusy += 1
+			//send token to chosen endpoint
+			state.idleTokens -= 1
 			//mark last ep
 			state.last_endpoint = candidate
-		} /*num idle=0=>no idle*/else if (state.numBusy >= len(state.endpoints)) {
+			//add chosen pod to busy pods map
+			state.busyPods[candidate] = candidate
+		} /*lb has no idle tokens (all pods busy)*/else if (state.idleTokens == 0) {
 			//choose last ep as candidate
 			candidate = state.last_endpoint
-			//increase numBusy and decrease by num of idle pods
-			state.numBusy += 1
-			state.numBusy -= numIdle
-			if (state.numBusy < 0) {
-				state.numBusy = 0
-			}
+			//increase by num of incoming idle pods
+			state.idleTokens += numIdle
 		}
 		return candidate, nil
 	} else if (typ == 6) { // NEW WJSQ Load balancer
@@ -405,7 +413,7 @@ typ, _ = strconv.Atoi(splt[0])
 			}
 		}
 		return bestload.candidate, nil
-	} 
+	}
 	return "", ErrMissingEndpoints
 }
 
@@ -525,6 +533,10 @@ func (lb *LoadBalancerRR) OnEndpointsAdd(endpoints *v1.Endpoints) {
 
 			// Reset the round-robin index.
 			state.index = 0
+			//reset num of idle tokens
+			state.idleTokens = len(state.endpoints)
+			//reset busyPods
+			state.busyPods = make(map[string]int32, len(state.endpoints))
 		}
 	}
 }
@@ -578,6 +590,10 @@ func (lb *LoadBalancerRR) OnEndpointsUpdate(oldEndpoints, endpoints *v1.Endpoint
 
 			// Reset the round-robin index.
 			state.index = 0
+			//reset num of idle tokens
+			state.idleTokens = len(state.endpoints)
+			//reset busyPods
+			state.busyPods = make(map[string]int32, len(state.endpoints))
 		}
 		registeredEndpoints[svcPort] = true
 	}
@@ -599,6 +615,10 @@ func (lb *LoadBalancerRR) resetService(svcPort proxy.ServicePortName) {
 			state.endpoints = []string{}
 		}
 		state.index = 0
+		//reset num of idle tokens
+		state.idleTokens = len(state.endpoints)
+		//reset busyPods
+		state.busyPods = make(map[string]int32, len(state.endpoints))
 		state.affinity.affinityMap = map[string]*affinityState{}
 	}
 }
