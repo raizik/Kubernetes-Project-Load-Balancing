@@ -75,7 +75,7 @@ type balancerState struct {
 	affinity  affinityPolicy
 	busyPods map[string]string // busyPods[i] == j <=> endpoint ipport j is busy. init to empty
 	last_endpoint string      // last ipport pod the LB sent a job to
-	idleTokens int	// should be init to len(endpoints) number of idle pods in idlePods array (and number of ones in tickets)
+	idleTokens int	// init to len(endpoints) number of idle pods in idlePods array (and number of ones in tickets)
 }
 
 func newAffinityPolicy(affinityType v1.ServiceAffinity, ttlSeconds int) *affinityPolicy {
