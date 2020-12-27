@@ -1,5 +1,5 @@
 # Kubernetes Load Balancing algorithms
-In this project I implemented and tested both an improved version of Power-of-2-Choice implemented in the previous semester which is based on weighted queues and a newly researched algorithm - Persistent-Idle (PI). 
+In this project I implemented and tested both an improved version of Power-of-2-Choice which is based on weighted queues and a newly researched algorithm - Persistent-Idle (PI). 
 
 I adjusted and compiled the load balancer (kube-proxy) to have the new algorithm and be able to switch between the algorithms at runtime. The Kube code can be found in the kubernetes folder.
 
